@@ -5143,9 +5143,8 @@ If there is no affiliated keyword, return the empty string."
 ;; global indentation from the contents of the current element.
 
 (defun org-element-normalize-string (s)
-  "Ensure string S ends with a single newline character.
-
-If S isn't a string return it unchanged.  If S is the empty
+  "Return S, or evaluate to a string ending with a single newline character.
+If S isn't a string or a function, return it unchanged.  If S is the empty
 string, return it.  Otherwise, return a new string with a single
 newline character at its end."
   (cond
@@ -5153,6 +5152,21 @@ newline character at its end."
    ((string= "" s) "")
    (t (and (string-match "\\(\n[ \t]*\\)*\\'" s)
 	   (replace-match "\n" nil nil s)))))
+
+
+(defun org-element-normalize-str-or-fn (input &rest trailing)
+  "If INPUT is a string, it is passed to `org-element-normalize-string'.
+If INPUT is a function, it is applied to arguments TRAILING, and the result is
+passed to `org-element-normalize-string'."
+  (let ((s (if (functionp input) (format "%s" (apply input trailing)) input)))
+    (org-element-normalize-string s)))
+
+
+;; Test cases for `org-element-normalize-str-or-fn'
+(cl-assert (string= (org-element-normalize-str-or-fn (lambda (_res) "abcdefg") nil) "abcdefg\n"))
+(cl-assert (string= (org-element-normalize-str-or-fn "abcdefg") "abcdefg\n") nil)
+(cl-assert (= (org-element-normalize-str-or-fn 123 nil) 123))
+
 
 (defun org-element-normalize-contents (element &optional ignore-first)
   "Normalize plain text in ELEMENT's contents.

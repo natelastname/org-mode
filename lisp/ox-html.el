@@ -131,7 +131,11 @@
     (:html-equation-reference-format "HTML_EQUATION_REFERENCE_FORMAT" nil org-html-equation-reference-format t)
     (:html-postamble nil "html-postamble" org-html-postamble)
     (:html-preamble nil "html-preamble" org-html-preamble)
-    (:html-head "HTML_HEAD" nil org-html-head newline)
+    ;; You should be able to use multiple headline properties "#+EXPORT_HTML_HEAD" in a file.
+    ;; The results of each occurrence will be joined by a newline to form the final string
+    ;; included in the <head> section.
+    ;; TODO: Test/verify this works still. See: `org-export-options-alist'.
+    (:html-head "HTML_HEAD" "html-head" org-html-head newline)
     (:html-head-extra "HTML_HEAD_EXTRA" nil org-html-head-extra newline)
     (:subtitle "SUBTITLE" nil nil parse)
     (:html-head-include-default-style
@@ -1399,6 +1403,24 @@ This option can also be set on with the CREATOR keyword."
   :package-version '(Org . "8.0")
   :type '(string :tag "Creator string"))
 
+
+;;;; Template :: Head
+
+(defcustom org-html-head ""
+  "When set to a string, include that string in the HTML header.
+When set to a function, apply this function and insert the
+returned string.  The function takes the property list of export
+options as its only argument.
+
+Setting :html-preamble in publishing projects will take
+precedence over this variable."
+  :group 'org-export-html
+  :type '(choice (const :tag "Default (empty)" "")
+                 (string :tag "Fixed string")
+		 (function :tag "Function (must return a string)")))
+
+
+
 ;;;; Template :: Preamble
 
 (defcustom org-html-preamble t
@@ -1522,38 +1544,7 @@ style information."
 ;;;###autoload
 (put 'org-html-head-include-default-style 'safe-local-variable 'booleanp)
 
-(defcustom org-html-head ""
-  "Org-wide head definitions for exported HTML files.
 
-This variable can contain the full HTML structure to provide a
-style, including the surrounding HTML tags.  You can consider
-including definitions for the following classes: title, todo,
-done, timestamp, timestamp-kwd, tag, target.
-
-For example, a valid value would be:
-
-   <style>
-      p { font-weight: normal; color: gray; }
-      h1 { color: black; }
-      .title { text-align: center; }
-      .todo, .timestamp-kwd { color: red; }
-      .done { color: green; }
-   </style>
-
-If you want to refer to an external style, use something like
-
-   <link rel=\"stylesheet\" type=\"text/css\" href=\"mystyles.css\" />
-
-As the value of this option simply gets inserted into the HTML
-<head> header, you can use it to add any arbitrary text to the
-header.
-
-You can set this on a per-file basis using #+HTML_HEAD:,
-or for publication projects using the :html-head property."
-  :group 'org-export-html
-  :version "24.4"
-  :package-version '(Org . "8.0")
-  :type 'string)
 ;;;###autoload
 (put 'org-html-head 'safe-local-variable 'stringp)
 
@@ -1989,8 +1980,8 @@ INFO is a plist used as a communication channel."
    (concat
     (when (plist-get info :html-head-include-default-style)
       (org-element-normalize-string org-html-style-default))
-    (org-element-normalize-string (plist-get info :html-head))
-    (org-element-normalize-string (plist-get info :html-head-extra))
+    (org-element-normalize-str-or-fn (plist-get info :html-head) info)
+    (org-element-normalize-str-or-fn (plist-get info :html-head-extra) info)
     (when (and (plist-get info :html-htmlized-css-url)
 	       (eq org-html-htmlize-output-type 'css))
       (org-html-close-tag "link"
